@@ -1,22 +1,39 @@
 
 import streamlit as st
 import pandas as pd
+import joblib
+import numpy as np
 
+# Page configuration
 st.set_page_config(
-    page_title="Water Quality Prediction",
+    page_title="Water Potability Prediction",
     page_icon="💧",
     layout="centered"
 )
 
-st.title("💧 Water Quality Prediction")
-st.write("Enter the water quality parameters below.")
+# Load trained model
+@st.cache_resource
+def load_model():
+    
+    return joblib.load('water_model.pkl')
 
-with st.form("water_quality_form"):
+model = load_model()
+
+# Application title
+st.title("💧 Water Potability Prediction")
+st.write("Enter water quality parameters to predict whether water is safe for drinking.")
+
+st.divider()
+
+# Input form
+with st.form("water_form"):
+
+    st.subheader("Water Quality Parameters")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.0, step=0.1)
+        ph = st.number_input("pH", min_value=0.0, max_value=14.0, value=7.0)
         hardness = st.number_input("Hardness", min_value=0.0, value=150.0)
         solids = st.number_input("Solids", min_value=0.0, value=20000.0)
         chloramines = st.number_input("Chloramines", min_value=0.0, value=7.0)
@@ -29,27 +46,28 @@ with st.form("water_quality_form"):
         turbidity = st.number_input("Turbidity", min_value=0.0, value=4.0)
 
     submitted = st.form_submit_button(
-        "Submit",
-        use_container_width=True
+        "🔍 Predict Potability",
+        use_container_width=True,
+       
     )
 
+# Prediction
+
+# Prediction
 if submitted:
 
-    input_data = {
-        "ph": ph,
-        "Hardness": hardness,
-        "Solids": solids,
-        "Chloramines": chloramines,
-        "Sulfate": sulfate,
-        "Conductivity": conductivity,
-        "Organic_carbon": organic_carbon,
-        "Trihalomethanes": trihalomethanes,
-        "Turbidity": turbidity
-    }
+    if not hasattr(model, "predict"):
+        st.error(f"Invalid model object: {type(model)}")
+        st.write("PKL contents:", repr(model))
+    else:
+        new_data = np.array([[
+            ph, hardness, solids, chloramines, sulfate,
+            conductivity, organic_carbon, trihalomethanes, turbidity
+        ]])
 
-    st.success("Form submitted successfully!")
+        predictions = model.predict(new_data)
 
-    st.subheader("Entered Water Quality Data")
-
-    df = pd.DataFrame([input_data])
-    st.dataframe(df, use_container_width=True)
+        if predictions[0] == 1:
+            st.success("Water is Potable.", icon="✅")
+        else:
+            st.error("Water is Not Potable.", icon="⚠️")
